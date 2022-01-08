@@ -24,11 +24,12 @@ class _BackgroundSubtractorDataset(torch.utils.data.Dataset):
         kernel = np.ones((5, 5), np.float32) / 25
         mask = cv2.filter2D(mask, -1, kernel)
 
-        return torch.stack(
+        response = torch.stack(
             [
-                torch.tensor(mask * image),
+                torch.tensor(mask * image, dtype=torch.uint8),
                 torch.tensor((1 - mask) * image, dtype=torch.uint8),
             ])
+        return response
     
     def __init__(self, images, F):
         self.images = images
@@ -80,7 +81,13 @@ class DataSet(torch.utils.data.Dataset):
             shuffle=False,
             batch_size=n_batches,
             num_workers=n_workers)
-        self.masked_images = torch.cat([row for row in loader])
+        self.masked_images = torch.stack([
+            torch.stack([
+                self.transform(Image.fromarray(row[0].numpy())),
+                self.transform(Image.fromarray(row[1].numpy()))
+            ])
+        for batches in loader
+        for row in batches])
         
         self.labels = labels    
         self.func_labels = (lambda X: 1 if sum(X) > 0 else 0) if is_video else (lambda X: X[0])
@@ -105,5 +112,5 @@ class DataSet(torch.utils.data.Dataset):
             start = self.images.__len__() - self.F
             end = self.images.__len__()
         sub_labels = self.labels[start:end]
-        return self.masked_images[start:end], self.func_labels(sub_labels)
+        return self.masked_images[start:end].transpose_(0, 1), self.func_labels(sub_labels)
        
