@@ -24,7 +24,6 @@ def extract(dataset, net, n_batches=N_BATCHES, n_workers=N_WORKERS, cuda=False):
     with torch.no_grad():
         with tqdm(total=len(loader), unit="batch") as pbar:
             for batches, b_labels in loader:
-                print(batches.size())
                 # B x Cls x F x C x H x W if video
                 # B x Cls x 1 x C x H x W if image
                 batches = batches.cuda() if cuda else batches
