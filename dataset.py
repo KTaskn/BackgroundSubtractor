@@ -94,9 +94,9 @@ class DataSet(torch.utils.data.Dataset):
 
     def __len__(self):
         if self.is_video:
-            return self.images.__len__() // self.F + 1
+            return self.masked_images.__len__() // self.F + 1
         else:
-            return self.images.__len__()            
+            return self.masked_images.__len__()            
 
     def _get_start_and_end(self, idx):        
         if self.is_video:
@@ -107,10 +107,16 @@ class DataSet(torch.utils.data.Dataset):
     def __getitem__(self, idx):
         start, end = self._get_start_and_end(idx)
         
-        if start > self.images.__len__() - self.F:
+        if start > self.__len__() - self.F and self.is_video:
             # Count from the end and match if the number is not divisible.
-            start = self.images.__len__() - self.F
-            end = self.images.__len__()
+            start = self.__len__() - self.F
+            end = self.__len__()
+        sub_images = self._select(self.masked_images[start:end])
         sub_labels = self.labels[start:end]
-        return self.masked_images[start:end].transpose_(0, 1), self.func_labels(sub_labels)
+        return sub_images, self.func_labels(sub_labels)
        
+    def _select(self, images):
+        if self.is_video:
+            return images.transpose_(0, 1)
+        else:
+            return images[:1].transpose_(0, 1)
